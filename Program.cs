@@ -11,31 +11,48 @@ namespace DailyAnimeWallpaper
 
         public const string SaveFolder = "pictures";
 
-        public const string HistoricFileNamePattern = @"yyyy.MM.dd.HH.mm.ss.fff";
+        public const string HistoricFileNamePattern = @"yyyy.MM.dd.HH.mm.ss";
 
-        public const bool DeleteTheDownloadedFileAfterSet = false;
+        public static bool DeleteTheDownloadedFileAfterSet = false;
 
-        static void Main(string[] args)
+        public static string? appName = Path.GetFileNameWithoutExtension(System.Diagnostics.Process.GetCurrentProcess().MainModule.ModuleName);
+
+        static void Main()
         {
-            Console.WriteLine(SetNewWallpaper());
+            checkArguementsFromAppName();
+            Console.WriteLine(SetNewWallpaper(DeleteTheDownloadedFileAfterSet));
         }
-
+        static void checkArguementsFromAppName()
+        {
+            if (appName == null)
+            {
+                Console.WriteLine("App name is null. Arguements couldn't fetch.");
+                return;
+            }
+            if (appName.Contains("$1"))
+            {
+                DeleteTheDownloadedFileAfterSet = true;
+            }
+        }
         static bool SetNewWallpaper(bool deleteTheDownloadedFileAfterSet = false)
         {
-            var picture = DownloadNewWallpaper(ApiUrl, SaveFolder);
+            var picture = deleteTheDownloadedFileAfterSet ? 
+                DownloadNewWallpaper(ApiUrl) : DownloadNewWallpaper(ApiUrl, SaveFolder);
             if (picture != null)
             {
-                bool res = ChangeWindowsWallpaper(picture);
-                if (res && deleteTheDownloadedFileAfterSet)
+                bool result = ChangeWindowsWallpaper(picture);
+                if (result && deleteTheDownloadedFileAfterSet)
+                {
                     File.Delete(picture);
-                return res;
+                }
+                return result;
             }
-            else
-                Console.WriteLine("Unknown picture download error");
+
+            Console.WriteLine("Unknown error on picture download");
             return false;
         }
 
-        static string? DownloadNewWallpaper(string apiUrl, string saveFolder, string fileName = null)
+        static string? DownloadNewWallpaper(string apiUrl, string? saveFolder = null, string? fileName = null)
         {
             if(string.IsNullOrEmpty(fileName))
                 fileName = DateTime.Now.ToString(HistoricFileNamePattern);
@@ -43,8 +60,13 @@ namespace DailyAnimeWallpaper
             Console.WriteLine("Getting JSON data from: " + apiUrl);
             var json = new HttpClient().GetStringAsync(@apiUrl).Result;
 
-            var url = ExtractUrlFromJson(json);
-
+            string? url = ExtractUrlFromJson(json);
+            if(url == null)
+            {
+                Console.WriteLine("The image url couldn't fetch from server.\nPress any key to continue.");
+                Console.ReadKey(true);
+                return null;
+            }
             Console.WriteLine("Downloading picture from: " + url);
             string? picturePath = DownloadFile(url, saveFolder, fileName);
 
@@ -79,26 +101,18 @@ namespace DailyAnimeWallpaper
         }
         static string GetFileNameFromUrl(string url)
         {
-            Uri uri;
-            if (Uri.TryCreate(url, UriKind.Absolute, out uri))
+            if (Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) && uri != null)
             {
                 return System.IO.Path.GetFileName(uri.LocalPath);
             }
             Console.WriteLine("File name couldn't get from server. instead using a uuid");
             return Guid.NewGuid().ToString();
         }
-        static string? DownloadFile(string url, string saveFolder, string saveName = null)
+        static string? DownloadFile(string url, string? saveFolder = null, string? saveName = null)
         {
-            string _saveName, _saveFolderFullPath;
+            string? _saveName, _saveFolderFullPath = "";
             try
             {
-                if (!Directory.Exists(saveFolder))
-                {
-                    Directory.CreateDirectory(saveFolder);
-                }
-
-                _saveFolderFullPath = Path.GetFullPath(saveFolder);
-
                 if (string.IsNullOrEmpty(saveName))
                 {
                     _saveName = GetFileNameFromUrl(url);
@@ -106,7 +120,16 @@ namespace DailyAnimeWallpaper
                 else
                     _saveName = saveName + GetFileExtensionFromUrl(url);
 
-                string saveTo = _saveFolderFullPath + "\\" + _saveName;
+                if (saveFolder != null)
+                {
+                    if (!Directory.Exists(saveFolder))
+                    {
+                        Directory.CreateDirectory(saveFolder);
+                    }
+
+                    _saveFolderFullPath = saveFolder + "\\";
+                }
+                string saveTo = Path.GetFullPath(_saveFolderFullPath + _saveName);
                 
                 using (WebClient client = new WebClient())
                 {
@@ -120,7 +143,7 @@ namespace DailyAnimeWallpaper
                 return null;
             }
         }
-        static string ExtractUrlFromJson(string json)
+        static string? ExtractUrlFromJson(string json)
         {
             try
             {
@@ -160,6 +183,8 @@ namespace DailyAnimeWallpaper
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+                Console.WriteLine("press a key to continue");
+                Console.ReadKey();
                 return false;
             }
         }
