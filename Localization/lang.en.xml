@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<strings>
+  <LanguageName>English</LanguageName>
+  <s name="AppTitle">Daily Anime Wallpaper</s>
+  <s name="AppDescription">Downloads and applies a new anime wallpaper each time it starts.</s>
+  <s name="SettingLanguage">Language</s>
+  <s name="LanguageSystem">Follow Windows</s>
+  <s name="SettingsTitle">Settings</s>
+  <s name="SettingImageSaveDirectory">Image save directory</s>
+  <s name="SettingEnableLogging">Enable logging</s>
+  <s name="SettingsSaved">Settings saved.</s>
+  <s name="ButtonSave">Save</s>
+  <s name="ButtonCancel">Cancel</s>
+  <s name="ButtonRetry">Retry</s>
+  <s name="ButtonClose">Close</s>
+  <s name="ButtonOpenFolder">Open folder</s>
+  <s name="StatusReady">Ready</s>
+  <s name="StatusWorking">Operation in progress.</s>
+  <s name="StatusCompleted">Operation completed.</s>
+  <s name="StatusCanceled">Operation canceled.</s>
+  <s name="StatusFailed">The operation could not be completed.</s>
+  <s name="ProgressItems">Processed {0} / {1} items.</s>
+  <s name="StatusDownloadingMetadata">Getting image information from: {0}</s>
+  <s name="StatusDownloadingImage">Downloading image from: {0}</s>
+  <s name="StatusImageSaved">Image saved to: {0}</s>
+  <s name="StatusImageUrlMissing">The server response did not contain an image URL.</s>
+  <s name="StatusExtensionFallback">The file extension could not be determined; .jpg will be used.</s>
+  <s name="StatusFileNameFallback">The file name could not be determined; a new name will be used.</s>
+  <s name="StatusApplicationNameMissing">The application file name could not be read.</s>
+</strings>
