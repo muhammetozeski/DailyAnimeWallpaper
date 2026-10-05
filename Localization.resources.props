@@ -1,8 +1,0 @@
-<Project>
-  <ItemGroup>
-    <None Remove="$(MSBuildThisFileDirectory)Localization\lang.en.xml" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Localization\lang.en.xml"
-                      LogicalName="DailyAnimeWallpaper.Localization.lang.en.xml"
-                      WithCulture="false" />
-  </ItemGroup>
-</Project>
