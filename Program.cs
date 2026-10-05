@@ -9,8 +9,6 @@ namespace DailyAnimeWallpaper
     {
         public const string ApiUrl = @"https://api.waifu.pics/sfw/waifu";
 
-        public const string SaveFolder = "pictures";
-
         public const string HistoricFileNamePattern = @"yyyy.MM.dd.HH.mm.ss";
 
         public static bool DeleteTheDownloadedFileAfterSet = false;
@@ -20,7 +18,7 @@ namespace DailyAnimeWallpaper
         static void Main()
         {
             checkArguementsFromAppName();
-            Console.WriteLine(SetNewWallpaper(DeleteTheDownloadedFileAfterSet));
+            Console.WriteLine(SetNewWallpaper(DeleteTheDownloadedFileAfterSet, AppSettings.Load().GetImageSaveDirectory()));
         }
         static void checkArguementsFromAppName()
         {
@@ -34,10 +32,10 @@ namespace DailyAnimeWallpaper
                 DeleteTheDownloadedFileAfterSet = true;
             }
         }
-        static bool SetNewWallpaper(bool deleteTheDownloadedFileAfterSet = false)
+        static bool SetNewWallpaper(bool deleteTheDownloadedFileAfterSet, string imageSaveDirectory)
         {
             var picture = deleteTheDownloadedFileAfterSet ? 
-                DownloadNewWallpaper(ApiUrl) : DownloadNewWallpaper(ApiUrl, SaveFolder);
+                DownloadNewWallpaper(ApiUrl) : DownloadNewWallpaper(ApiUrl, imageSaveDirectory);
             if (picture != null)
             {
                 bool result = ChangeWindowsWallpaper(picture);
