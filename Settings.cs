@@ -32,7 +32,7 @@ internal static class Settings
 {
     public static readonly Setting<string> Language = new("system");
     public static readonly Setting<bool> EnableLogging = new(true);
-    public static readonly Setting<string> ImageSaveDirectory = new("pictures", isOptional: false);
+    public static readonly Setting<string> ImageSaveDirectory = new("Pictures", isOptional: false);
 }
 
 internal interface ISetting

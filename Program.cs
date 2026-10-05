@@ -1,7 +1,9 @@
 using System.ComponentModel;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using DailyAnimeWallpaper.Localization;
+using Polly.Timeout;
 
 namespace DailyAnimeWallpaper;
 
@@ -9,7 +11,6 @@ namespace DailyAnimeWallpaper;
 internal static class Program
 {
     const bool IsLogEnabled = true;
-    const string ApiUrl = "https://api.waifu.pics/sfw/waifu";
     const string HistoricFileNamePattern = "yyyy.MM.dd.HH.mm.ss";
     const int SetDesktopWallpaper = 20;
     const int UpdateProfile = 0x01;
@@ -85,7 +86,8 @@ internal static class Program
     static string? DownloadNewWallpaper(string apiUrl, string? saveFolder = null)
     {
         Log(string.Format(Strings.StatusDownloadingMetadata, apiUrl), isRun: IsLogEnabled);
-        string json = HttpClient.GetStringAsync(apiUrl).GetAwaiter().GetResult();
+        string json = Resilience.ExecuteResilientlyAsync(
+            token => HttpClient.GetStringAsync(apiUrl, token), ShouldRetryDownload).GetAwaiter().GetResult();
         string? imageUrl = ExtractUrlFromJson(json);
         if (imageUrl is null)
         {
@@ -151,9 +153,9 @@ internal static class Program
         Directory.CreateDirectory(directory);
         string destination = Path.GetFullPath(Path.Combine(directory, fileName));
 
-        using Stream imageStream = HttpClient.GetStreamAsync(url).GetAwaiter().GetResult();
-        using var outputStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None);
-        imageStream.CopyTo(outputStream);
+        byte[] imageBytes = Resilience.ExecuteResilientlyAsync(
+            token => HttpClient.GetByteArrayAsync(url, token), ShouldRetryDownload).GetAwaiter().GetResult();
+        File.WriteAllBytes(destination, imageBytes);
         return destination;
     }
 
@@ -163,11 +165,24 @@ internal static class Program
     static string? ExtractUrlFromJson(string json)
     {
         using JsonDocument document = JsonDocument.Parse(json);
-        if (document.RootElement.TryGetProperty("url", out JsonElement urlProperty))
-            return urlProperty.GetString() is { Length: > 0 } url ? url : null;
+        if (document.RootElement.TryGetProperty("items", out JsonElement items) &&
+            items.ValueKind == JsonValueKind.Array && items.GetArrayLength() > 0 &&
+            items[0].TryGetProperty("url", out JsonElement urlProperty) &&
+            urlProperty.ValueKind == JsonValueKind.String &&
+            Uri.TryCreate(urlProperty.GetString(), UriKind.Absolute, out Uri? url) &&
+            url.Scheme == Uri.UriSchemeHttps)
+            return url.AbsoluteUri;
 
         return null;
     }
+
+    /// <summary>Selects temporary transport, rate-limit, server, and request timeout failures for retry.</summary>
+    /// <param name="exception">The failure from an isolated download attempt.</param>
+    /// <returns>True when a repeated read request can recover from the failure.</returns>
+    static bool ShouldRetryDownload(Exception exception) => exception is TimeoutRejectedException ||
+        exception is HttpRequestException http &&
+        (http.StatusCode is null or HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests ||
+         (int)http.StatusCode.Value >= 500);
 
     /// <summary>Sets the Windows desktop wallpaper and propagates operating-system errors.</summary>
     /// <param name="imagePath">The absolute image path.</param>

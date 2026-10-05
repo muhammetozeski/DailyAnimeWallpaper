@@ -7,6 +7,7 @@ internal static class AppConstants
 
     public const bool PublishMode = false;
     public const string AppTitle = "DailyAnimeWallpaper";
+    public const string ApiUrl = "https://api.waifu.im/images";
     public const string CommentPrefix = "#";
     public const string KeyValueSeparator = "=";
 
