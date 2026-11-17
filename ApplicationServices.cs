@@ -22,16 +22,17 @@ internal static class ApplicationServices
                 return;
 
             Directory.CreateDirectory(AppPaths.UserData);
-            SettingsManager.LoadSettings(ConfigFileName);
+            LoadSettingsWithRecovery();
             Logger.ActivateLogging = Settings.EnableLogging.Value;
             LocManager.Init(Settings.Language.Value);
             SettingsManagerSettings.IsTurkish = LocManager.Current == "tr";
             ValidateLanguageFile("tr");
             ValidateLanguageFile("en");
             ValidateAppliedLanguage(LocManager.Resolve(Settings.Language.Value));
+            LoadSourceCatalogWithRecovery();
             Initialized = true;
             if (IsLogEnabled)
-                Log($"Application initialized; root={AppPaths.Root}; language={LocManager.Current}; settings={SettingsManager.GetAllSettings().Length}", isRun: IsLogEnabled);
+                Log($"Application initialized; root={AppPaths.Root}; language={LocManager.Current}; settings={SettingsManager.GetAllSettings().Length}; providers={SourceCatalogManager.GetProvidersSnapshot().Count}", isRun: IsLogEnabled);
         }
     });
 
@@ -96,5 +97,34 @@ internal static class ApplicationServices
         foreach (var field in typeof(Strings).GetFields(BindingFlags.Public | BindingFlags.Static))
             if (field.FieldType == typeof(string) && !Equals(field.GetValue(null), values[field.Name]))
                 throw new InvalidDataException($"Language {language} was not applied to {field.Name}.");
+    }
+
+    static void LoadSettingsWithRecovery()
+    {
+        try
+        {
+            SettingsManager.LoadSettings(ConfigFileName);
+        }
+        catch (FormatException formatEx)
+        {
+            Log($"Settings file had invalid entries; valid values retained and defaults applied where needed: {formatEx.Message}", isRun: IsLogEnabled);
+            SettingsManager.SaveSettings(ConfigFileName);
+        }
+    }
+
+    static void LoadSourceCatalogWithRecovery()
+    {
+        try
+        {
+            SourceCatalogManager.LoadOrCreateCatalog(SourcesFileName);
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or InvalidDataException)
+        {
+            string backupPath = $"{SourcesFileName}.{DateTime.Now:yyyyMMddHHmmss}.bak";
+            if (File.Exists(SourcesFileName))
+                File.Move(SourcesFileName, backupPath, overwrite: true);
+            Log($"Corrupt sources catalog backed up to '{backupPath}'; rebuilding defaults. Error={ex}", isRun: IsLogEnabled);
+            SourceCatalogManager.LoadOrCreateCatalog(SourcesFileName);
+        }
     }
 }
